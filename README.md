@@ -7,10 +7,11 @@ Used by [React-Patterns](https://github.com/springload/react-patterns/) to extra
 Requires a browser environment, and works in browsers and JSDOM.
 
 ## Install
+<pre>
+npm install <a href="https://www.npmjs.com/package/css-sniff">css-sniff</a>
 
-    npm install css-sniff
-
-    yarn add css-sniff
+yarn add <a href="https://www.npmjs.com/package/css-sniff">css-sniff</a>
+</pre>
 
 ## Usage
 
