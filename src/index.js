@@ -212,7 +212,7 @@ function ruleIsAllowed(ruleString, options) {
   return whitelisted !== false && blacklisted !== true;
 }
 
-function deepMergeRules(rulesArray) {
+export function deepMergeRules(rulesArray) {
   // Via https://stackoverflow.com/a/34749873
   /**
    * Simple object check.
