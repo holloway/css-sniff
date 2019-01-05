@@ -7,13 +7,13 @@
  @returns { object }
    'matchedCSS' a variable to give to serialize()
 */
-export const getCSSRules = (children, options, matchedCSS) => {
+export function getCSSRules(children, options, matchedCSS) {
   return children.reduce((matchedCSS, child, i) => {
     matchedCSS = getCSSRulesByElement(child, options, matchedCSS);
     if (child.childNodes) matchedCSS = getCSSRules([...child.childNodes], options, matchedCSS);
     return matchedCSS;
   }, matchedCSS || {});
-};
+}
 
 function getCSSRulesByElement(el, options, matchedCSS) {
   const matches = el.matches || el.webkitMatchesSelector || el.mozMatchesSelector || el.msMatchesSelector || el.oMatchesSelector;

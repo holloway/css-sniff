@@ -1,10 +1,16 @@
 # CSS Sniff
 
-A utility that looks at document nodes (elements) and returns all matching CSS Rules (selectors+properties). Because the CSS Rules are found (not inline styles), it includes responsive modes and pseudo-elements etc.
+A utility that looks at parts of webpages (elements) and returns all matching CSS Rules (selectors+properties). Because the CSS Rules are extracted (not inline styles), it includes responsive modes and pseudo-elements etc.
 
-Used by [React-Patterns](https://github.com/springload/react-patterns/) to extract CSS Rules for pattern libraries, but could also be used for extracting crucial CSS 'above the fold' etc.
+Used by [React-Patterns](https://github.com/springload/react-patterns/) to extract CSS Rules for Pattern Libraries, but could also be used for extracting crucial CSS 'above the fold' etc.
 
 Requires a browser environment, and works in browsers and JSDOM.
+
+## Install
+
+    npm install css-sniff
+
+    yarn add css-sniff
 
 ## Usage
 
@@ -83,5 +89,3 @@ Some CSS properties are inherited (or effectively inherited) from parent element
 For example, if you have a `header` with a red background but that red colour comes from `body { background: red; }` then searching for CSS Rules for `header` won't include the red background CSS.
 
 Similarly, if a parent element defines a `line-height` which is used by descendant elements then that won't be included.
-
-Arguably I suppose standalone components shouldn't rely on cascade, but that's a whole 'nother can of worms.
