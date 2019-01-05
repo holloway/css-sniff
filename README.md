@@ -1,12 +1,15 @@
 # CSS Sniff
 
-A utility that looks at parts of webpages (elements) and returns all matching CSS Rules (selectors+properties). Because the CSS Rules are extracted (not inline styles), it includes responsive modes and pseudo-elements etc.
+A tiny utility that looks at parts of webpages (elements) and returns all the matching CSS Rules (selectors+properties). So it's essentially a CSS scraper but only for particular parts of the page.
 
-Used by [React-Patterns](https://github.com/springload/react-patterns/) to extract CSS Rules for Pattern Libraries, but could also be used for extracting crucial CSS 'above the fold' etc.
+Because real CSS Rules are extracted it includes responsive modes and pseudo-elements etc.
 
-Requires a browser environment, and works in browsers and JSDOM.
+Requires a browser-like environment, so it works in browsers and [JSDOM](https://www.npmjs.com/package/jsdom).
+
+It's used by [React-Patterns](https://github.com/springload/react-patterns/) to extract CSS Rules from components to make a Pattern Library, but could also be used for extracting crucial CSS 'above the fold' etc.
 
 ## Install
+
 <pre>
 npm install <a href="https://www.npmjs.com/package/css-sniff">css-sniff</a>
 

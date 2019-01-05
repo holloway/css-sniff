@@ -5,7 +5,7 @@
  @param options
  @param matchedCSS
  @returns { object }
-   'matchedCSS' a variable to give to serialize()
+   'matchedCSS' a variable to give to serializeCSSRules()
 */
 export function getCSSRules(children, options, matchedCSS) {
   return children.reduce((matchedCSS, child, i) => {
@@ -43,12 +43,11 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
 
     if (rule.selectorText) {
       if (ruleIsAllowed(rule.selectorText, options)) {
-        // TODO split selectorText by separator
-        // eg
-        // selector = 'a,b'  -->  ['a','b']
-        // BUT ALSO
-        // selector = 'a[attr=','],b'  -->  'a[attr=\',\']', 'b']
-        // Currently the splitting is naive
+        // TODO use proper selector parser
+        // Currently the splitting is naive and splits
+        // on comma which is fine for most CSS but
+        // this wouldn't support selectors strings like
+        // 'a[attr=','],b'
         const selectors = rule.selectorText.split(",");
         selectors.forEach(selector => {
           try {
