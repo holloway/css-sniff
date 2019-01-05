@@ -1,0 +1,26 @@
+{
+  "name": "css-sniff",
+  "version": "1.0.2",
+  "description": "Extracts matching CSS Rules (Selectors) that apply to elements",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "babel src --out-dir build"
+  },
+  "keywords": [
+    "css",
+    "cssom",
+    "selector",
+    "crucial",
+    "jsdom",
+    "property",
+    "rule",
+    "match"
+  ],
+  "author": "Matthew Holloway",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.2.2",
+    "@babel/preset-env": "^7.2.3"
+  }
+}
