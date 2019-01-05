@@ -1,6 +1,6 @@
 {
   "name": "css-sniff",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Extracts matching CSS Rules (Selectors) that apply to elements",
   "main": "build/index.js",
   "homepage": "https://github.com/holloway/css-sniff",
