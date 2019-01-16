@@ -34,6 +34,31 @@ cssString is now a string that might look like:
         }
     }
 
+Usage with JSDOM
+
+    import { getCSSRules, serializeCSSRules } from 'css-sniff';
+
+    const main = async () => {
+        dom = await JSDOM.fromURL(url, {
+            resources: "usable",
+            pretendToBeVisual: true
+        });
+
+        // Wait for subresources (external CSS) to load so
+        // that CSS detection will work
+        await new Promise(resolve => {
+            dom.window.document.addEventListener("load", resolve);
+        });
+
+        const elements = document.querySelectorAll('header, .logo');
+        const matchedCSS = getCSSRules([...elements], {
+            document: dom.window.document
+        });
+        const cssString = serializeCSSRules(matchedCSS);
+    }
+
+    main();
+
 ## API
 
 ### getCSSRules(children, options, matchedCSS)

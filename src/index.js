@@ -56,20 +56,81 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
         // this wouldn't support selectors strings like
         // 'a[attr=','],b'
         const selectors = rule.selectorText.split(",");
+
         selectors.forEach(selector => {
+          let trimmedSelector, normalizedSelector;
+
           try {
             // Exceptions may be thrown about browser-specific
             // selectors such as
+            //
+            //   input::-moz-something
+            //   input::-webkit-something
+            //   input::-ms-something
+            //   input:-moz-something
+            //   input:-webkit-something
+            //   input:-ms-something
+            //
+            // or potentially global selectors like without anything
+            // before the "::",
+            //
             //   ::-moz-something
-            //   ::-webkit-something
-            //   ::-ms-something
-            const trimmedSelector = selector.trim();
-            const colonColonIndex = trimmedSelector.indexOf("::");
-            const selectorBeforeColonColon = selector.substring(
-              0,
-              colonColonIndex === -1 ? selector.length : colonColonIndex
-            );
-            if (colonColonIndex === 0 || el.matches(selectorBeforeColonColon)) {
+            //
+            // and there are also escaped selectors like,
+            //
+            //   .link.\:link
+            //
+            //  (used like <input class="link :link">)
+            //
+            // and pseudo-elements like,
+            //
+            //   span::before
+            //
+            // where the "::before" is irrelevant to whether the
+            // selector matches the element so we should remove it.
+            //
+            // and
+            //
+            //   input:first-child
+            //   p > :first-child
+            //
+            // where we should change to
+            //   input
+            //   p > *
+            // respectively.
+            //
+            // So given all those scenarios we have the following logic,
+            //
+            // 1) If it starts with ":" without anything preceding we'll
+            //    consider it a match because it could be.
+            //    (maybe this should be configurable?)
+            //
+            // 2) If it has a ":" in it that's not preceded by "\" then
+            //    we remove to the end of the selector. ie,
+            //    input:-moz-something -> input
+            //    input\:-moz-something -> input\:-moz-something
+            //    input::before -> input::before
+            //    input\:\:moz-something -> input\:\:moz-something
+            trimmedSelector = selector.trim();
+            const unique = Math.random().toString(16);
+            normalizedSelector = trimmedSelector
+              .replace(/\\:/g, unique) // ensure "\:" is temporarily changed to simplify removing ":something"
+              .replace(/:+.*$/gi, match => {
+                return [
+                  ":first-child",
+                  ":last-child",
+                  ":first-letter",
+                  ":first-line"
+                ].includes(match.replace("::", ":"))
+                  ? match
+                  : "";
+              })
+              .replace(new RegExp(unique, "g"), "\\:");
+
+            if (
+              trimmedSelector.indexOf(":") === 0 ||
+              el.matches(normalizedSelector)
+            ) {
               matchedCSS[i] = {
                 selectors: (matchedCSS[i] && matchedCSS[i].selectors) || [],
                 properties: rule.cssText.substring(rule.cssText.indexOf("{"))
@@ -79,7 +140,16 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
               }
             }
           } catch (e) {
-            console.error("ERROR", selector, e);
+            if ("@charset".indexOf(rule.selectorText) !== -1) {
+              console.error(
+                "ERROR",
+                rule.type,
+                `[${trimmedSelector}]`,
+                `[[${normalizedSelector}]]`,
+                `(((${rule.selectorText})))`,
+                e
+              );
+            }
           }
         });
       }
@@ -269,3 +339,4 @@ export function serializeCSSRules(rules) {
     })
     .join("");
 }
+

@@ -1,3 +1,22 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getCSSRules = getCSSRules;
+exports.deepMergeRules = deepMergeRules;
+exports.serializeCSSRules = serializeCSSRules;
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+
 /* CSS Sniff.js - Matthew Holloway (C) 2019 */
 
 /*
@@ -7,26 +26,26 @@
  @returns { object }
    'matchedCSS' a variable to give to serializeCSSRules()
 */
-export function getCSSRules(children, options, matchedCSS) {
-  return children.reduce((matchedCSS, child, i) => {
+function getCSSRules(children, options, matchedCSS) {
+  return children.reduce(function (matchedCSS, child, i) {
     matchedCSS = getCSSRulesByElement(child, options, matchedCSS);
-    if (child.childNodes) matchedCSS = getCSSRules([...child.childNodes], options, matchedCSS);
+    if (child.childNodes) matchedCSS = getCSSRules(_toConsumableArray(child.childNodes), options, matchedCSS);
     return matchedCSS;
   }, matchedCSS || {});
 }
 
 function getCSSRulesByElement(el, options, matchedCSS) {
-  const matches = el.matches || el.webkitMatchesSelector || el.mozMatchesSelector || el.msMatchesSelector || el.oMatchesSelector;
+  var matches = el.matches || el.webkitMatchesSelector || el.mozMatchesSelector || el.msMatchesSelector || el.oMatchesSelector;
   if (!matches) return matchedCSS; // presumed text node
 
   el.matches = matches;
-  const sheets = options.document.styleSheets || window.document.styleSheets;
+  var sheets = options.document.styleSheets || window.document.styleSheets;
 
-  for (let i in sheets) {
-    const sheet = sheets[i];
+  for (var i in sheets) {
+    var sheet = sheets[i];
 
     if (sheetIsAllowed(sheet, options)) {
-      const matchedCSSRule = _filterCSSRulesByElement(el, sheet.rules || sheet.cssRules, options, matchedCSS[i] || {});
+      var matchedCSSRule = _filterCSSRulesByElement(el, sheet.rules || sheet.cssRules, options, matchedCSS[i] || {});
 
       if (matchedCSSRule) {
         matchedCSS[i] = matchedCSSRule;
@@ -38,8 +57,8 @@ function getCSSRulesByElement(el, options, matchedCSS) {
 }
 
 function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
-  for (let i in rules) {
-    const rule = rules[i];
+  var _loop = function _loop(i) {
+    var rule = rules[i];
 
     if (rule.selectorText) {
       if (ruleIsAllowed(rule.selectorText, options)) {
@@ -48,19 +67,69 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
         // on comma which is fine for most CSS but
         // this wouldn't support selectors strings like
         // 'a[attr=','],b'
-        const selectors = rule.selectorText.split(",");
-        selectors.forEach(selector => {
+        var selectors = rule.selectorText.split(",");
+        selectors.forEach(function (selector) {
+          var trimmedSelector, normalizedSelector;
+
           try {
             // Exceptions may be thrown about browser-specific
             // selectors such as
+            //
+            //   input::-moz-something
+            //   input::-webkit-something
+            //   input::-ms-something
+            //   input:-moz-something
+            //   input:-webkit-something
+            //   input:-ms-something
+            //
+            // or potentially global selectors like without anything
+            // before the "::",
+            //
             //   ::-moz-something
-            //   ::-webkit-something
-            //   ::-ms-something
-            const trimmedSelector = selector.trim();
-            const colonColonIndex = trimmedSelector.indexOf("::");
-            const selectorBeforeColonColon = selector.substring(0, colonColonIndex === -1 ? selector.length : colonColonIndex);
+            //
+            // and there are also escaped selectors like,
+            //
+            //   .link.\:link
+            //
+            //  (used like <input class="link :link">)
+            //
+            // and pseudo-elements like,
+            //
+            //   span::before
+            //
+            // where the "::before" is irrelevant to whether the
+            // selector matches the element so we should remove it.
+            //
+            // and
+            //
+            //   input:first-child
+            //   p > :first-child
+            //
+            // where we should change to
+            //   input
+            //   p > *
+            // respectively.
+            //
+            // So given all those scenarios we have the following logic,
+            //
+            // 1) If it starts with ":" without anything preceding we'll
+            //    consider it a match because it could be.
+            //    (maybe this should be configurable?)
+            //
+            // 2) If it has a ":" in it that's not preceded by "\" then
+            //    we remove to the end of the selector. ie,
+            //    input:-moz-something -> input
+            //    input\:-moz-something -> input\:-moz-something
+            //    input::before -> input::before
+            //    input\:\:moz-something -> input\:\:moz-something
+            trimmedSelector = selector.trim();
+            var unique = Math.random().toString(16);
+            normalizedSelector = trimmedSelector.replace(/\\:/g, unique) // ensure "\:" is temporarily changed to simplify removing ":something"
+            .replace(/:+.*$/gi, function (match) {
+              return [":first-child", ":last-child", ":first-letter", ":first-line"].includes(match.replace("::", ":")) ? match : "";
+            }).replace(new RegExp(unique, "g"), "\\:");
 
-            if (colonColonIndex === 0 || el.matches(selectorBeforeColonColon)) {
+            if (trimmedSelector.indexOf(":") === 0 || el.matches(normalizedSelector)) {
               matchedCSS[i] = {
                 selectors: matchedCSS[i] && matchedCSS[i].selectors || [],
                 properties: rule.cssText.substring(rule.cssText.indexOf("{"))
@@ -71,7 +140,9 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
               }
             }
           } catch (e) {
-            console.error("ERROR", selector, e);
+            if ("@charset".indexOf(rule.selectorText) !== -1) {
+              console.error("ERROR", rule.type, "[".concat(trimmedSelector, "]"), "[[".concat(normalizedSelector, "]]"), "(((".concat(rule.selectorText, ")))"), e);
+            }
           }
         });
       }
@@ -79,7 +150,7 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
       if (mediaIsAllowed(rule.conditionText, options)) {
         // a nested rule like @media { rule { ... } }
         // so we filter the rules inside individually
-        const nestedRules = _filterCSSRulesByElement(el, rule.rules || rule.cssRules, options, {});
+        var nestedRules = _filterCSSRulesByElement(el, rule.rules || rule.cssRules, options, {});
 
         if (nestedRules) {
           matchedCSS[i] = {
@@ -90,6 +161,10 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
         }
       }
     }
+  };
+
+  for (var i in rules) {
+    _loop(i);
   }
 
   return Object.keys(matchedCSS).length ? matchedCSS : undefined;
@@ -101,35 +176,42 @@ function sheetIsAllowed(sheet, options) {
   if (!sheet) return false;
   if (!sheet.ownerNode) return true;
 
-  const checkStylesheet = (sheet, sheetMatch) => {
+  var checkStylesheet = function checkStylesheet(sheet, sheetMatch) {
     switch (sheet.ownerNode.nodeName.toLowerCase()) {
       case "style":
       case "link":
         // matching on JSON.stringify(node.attrs)
-        const nodeAttrs = sheet.ownerNode.attributes;
-        const attrs = {};
+        var nodeAttrs = sheet.ownerNode.attributes;
+        var attrs = {};
 
-        for (let i = 0; i < nodeAttrs.length; i++) attrs[nodeAttrs[i].name] = nodeAttrs[i].value;
+        for (var i = 0; i < nodeAttrs.length; i++) {
+          attrs[nodeAttrs[i].name] = nodeAttrs[i].value;
+        }
 
-        const attributesJSON = JSON.stringify(attrs);
+        var attributesJSON = JSON.stringify(attrs);
         return attributesJSON.indexOf(sheetMatch) !== -1;
     }
   };
 
-  let whitelisted = true;
-  let blacklisted = false;
-  const whitelistStylesheets = options.whitelist && options.whitelist.stylesheet;
+  var whitelisted = true;
+  var blacklisted = false;
+  var whitelistStylesheets = options.whitelist && options.whitelist.stylesheet;
 
   if (whitelistStylesheets) {
-    const sheetMatches = Array.isArray(whitelistStylesheets) ? whitelistStylesheets : [whitelistStylesheets];
-    whitelisted = sheetMatches.some(sheetMatch => checkStylesheet(sheet, sheetMatches));
+    var sheetMatches = Array.isArray(whitelistStylesheets) ? whitelistStylesheets : [whitelistStylesheets];
+    whitelisted = sheetMatches.some(function (sheetMatch) {
+      return checkStylesheet(sheet, sheetMatches);
+    });
   }
 
-  const blacklistStylesheets = options.blacklist && options.blacklist.stylesheet;
+  var blacklistStylesheets = options.blacklist && options.blacklist.stylesheet;
 
   if (blacklistStylesheets) {
-    const sheetMatches = Array.isArray(blacklistStylesheets) ? blacklistStylesheets : [blacklistStylesheets];
-    blacklisted = sheetMatches.some(sheetMatch => checkStylesheet(sheet, sheetMatch));
+    var _sheetMatches = Array.isArray(blacklistStylesheets) ? blacklistStylesheets : [blacklistStylesheets];
+
+    blacklisted = _sheetMatches.some(function (sheetMatch) {
+      return checkStylesheet(sheet, sheetMatch);
+    });
   }
 
   return whitelisted !== false && blacklisted !== true;
@@ -137,20 +219,25 @@ function sheetIsAllowed(sheet, options) {
 
 function mediaIsAllowed(mediaString, options) {
   if (!options || !mediaString) return false;
-  let whitelisted = true;
-  let blacklisted = false;
-  const whitelistMedia = options.whitelist && options.whitelist.media;
+  var whitelisted = true;
+  var blacklisted = false;
+  var whitelistMedia = options.whitelist && options.whitelist.media;
 
   if (whitelistMedia) {
-    const mediaMatches = Array.isArray(whitelistMedia) ? whitelistMedia : [whitelistMedia];
-    whitelisted = mediaMatches.some(mediaMatch => mediaString.indexOf(mediaMatch) !== -1);
+    var mediaMatches = Array.isArray(whitelistMedia) ? whitelistMedia : [whitelistMedia];
+    whitelisted = mediaMatches.some(function (mediaMatch) {
+      return mediaString.indexOf(mediaMatch) !== -1;
+    });
   }
 
-  const blacklistMedia = options.blacklist && options.blacklist.media;
+  var blacklistMedia = options.blacklist && options.blacklist.media;
 
   if (blacklistMedia) {
-    const mediaMatches = Array.isArray(blacklistMedia) ? blacklistMedia : [blacklistMedia];
-    blacklisted = mediaMatches.some(mediaMatch => mediaString.indexOf(mediaMatch) !== -1);
+    var _mediaMatches = Array.isArray(blacklistMedia) ? blacklistMedia : [blacklistMedia];
+
+    blacklisted = _mediaMatches.some(function (mediaMatch) {
+      return mediaString.indexOf(mediaMatch) !== -1;
+    });
   }
 
   return whitelisted !== false && blacklisted !== true;
@@ -158,20 +245,25 @@ function mediaIsAllowed(mediaString, options) {
 
 function ruleIsAllowed(ruleString, options) {
   if (!options || !ruleString) return false;
-  let whitelisted = true;
-  let blacklisted = false;
-  const whitelistRules = options.whitelist && options.whitelist.rule;
+  var whitelisted = true;
+  var blacklisted = false;
+  var whitelistRules = options.whitelist && options.whitelist.rule;
 
   if (whitelistRules) {
-    const ruleMatches = Array.isArray(whitelistRules) ? whitelistRules : [whitelistRules];
-    whitelisted = ruleMatches.some(ruleMatch => ruleString.indexOf(ruleMatch) !== -1);
+    var ruleMatches = Array.isArray(whitelistRules) ? whitelistRules : [whitelistRules];
+    whitelisted = ruleMatches.some(function (ruleMatch) {
+      return ruleString.indexOf(ruleMatch) !== -1;
+    });
   }
 
-  const blacklistRules = options.blacklist && options.blacklist.rule;
+  var blacklistRules = options.blacklist && options.blacklist.rule;
 
   if (blacklistRules) {
-    const ruleMatches = Array.isArray(blacklistRules) ? blacklistRules : [blacklistRules];
-    blacklisted = ruleMatches.some(ruleMatch => ruleString.indexOf(ruleMatch) !== -1);
+    var _ruleMatches = Array.isArray(blacklistRules) ? blacklistRules : [blacklistRules];
+
+    blacklisted = _ruleMatches.some(function (ruleMatch) {
+      return ruleString.indexOf(ruleMatch) !== -1;
+    });
   }
 
   return whitelisted !== false && blacklisted !== true;
@@ -195,36 +287,36 @@ function deepMergeRules(rulesArray) {
    */
 
 
-  function mergeDeep(target, ...sources) {
+  function mergeDeep(target) {
+    for (var _len = arguments.length, sources = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      sources[_key - 1] = arguments[_key];
+    }
+
     if (!sources.length) return target;
-    const source = sources.shift();
+    var source = sources.shift();
 
     if (isObject(target) && isObject(source)) {
-      for (const key in source) {
+      for (var key in source) {
         if (isObject(source[key])) {
-          if (!target[key]) Object.assign(target, {
-            [key]: {}
-          });
+          if (!target[key]) Object.assign(target, _defineProperty({}, key, {}));
           mergeDeep(target[key], source[key]);
         } else {
-          Object.assign(target, {
-            [key]: source[key]
-          });
+          Object.assign(target, _defineProperty({}, key, source[key]));
         }
       }
     }
 
-    return mergeDeep(target, ...sources);
+    return mergeDeep.apply(void 0, [target].concat(sources));
   }
 
-  return mergeDeep({}, ...rulesArray);
+  return mergeDeep.apply(void 0, [{}].concat(_toConsumableArray(rulesArray)));
 }
 
-export function serializeCSSRules(rules) {
+function serializeCSSRules(rules) {
   if (!rules) return "";
-  return Object.keys(rules).map(key => {
-    const rule = rules[key];
-    let css = "";
+  return Object.keys(rules).map(function (key) {
+    var rule = rules[key];
+    var css = "";
 
     if (rule.selectors) {
       css += rule.selectors.join(",");
