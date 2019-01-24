@@ -49,7 +49,6 @@ function getCSSRulesByElement(el, options, matchedCSS) {
 function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
   for (let i in rules) {
     const rule = rules[i];
-    console.log("sdfsdfsdf", rule.media);
     if (rule.selectorText) {
       if (ruleIsAllowed(rule.selectorText, options)) {
         const selectors = splitSelectors(rule.selectorText);
@@ -158,7 +157,6 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
       (rule.conditionText || rule.media)
     ) {
       const conditionText = rule.conditionText || rule.media[0];
-      console.log({ rulez: conditionText });
       if (mediaIsAllowed(conditionText, options)) {
         // a nested rule like @media { rule { ... } }
         // so we filter the rules inside individually
