@@ -47,6 +47,21 @@ describe("CSS Rules", () => {
     const css = serializeCSSRules(matchedCSS);
     expect(css).toBe("p{background: red;}@media print {p{color: purple;}}");
   });
+
+  it("Handles escaping \\: in class (2 chars: a backslash and colon)", async () => {
+    const dom = await getDom(
+      ".link { background: blue;} .link.\\:focus { background: red;} ",
+      '<p class="link :focus">test</p>'
+    );
+    const paragraphs = [...dom.window.document.querySelectorAll("p")];
+    const matchedCSS = getCSSRules(paragraphs, {
+      document: dom.window.document
+    });
+    const css = serializeCSSRules(matchedCSS);
+    expect(css).toBe(
+      ".link{background: blue;}.link.\\:focus{background: red;}"
+    );
+  });
 });
 
 const getDom = async (css, body) => {

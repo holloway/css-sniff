@@ -61,7 +61,6 @@ function getCSSRulesByElement(el, options, matchedCSS) {
 function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
   var _loop = function _loop(i) {
     var rule = rules[i];
-    console.log("sdfsdfsdf", rule.media);
 
     if (rule.selectorText) {
       if (ruleIsAllowed(rule.selectorText, options)) {
@@ -150,9 +149,6 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
       }
     } else if ((rule.rules || rule.cssRules) && (rule.conditionText || rule.media)) {
       var conditionText = rule.conditionText || rule.media[0];
-      console.log({
-        rulez: conditionText
-      });
 
       if (mediaIsAllowed(conditionText, options)) {
         // a nested rule like @media { rule { ... } }
