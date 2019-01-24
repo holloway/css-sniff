@@ -19,6 +19,8 @@ function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 /* CSS Sniff.js - Matthew Holloway (C) 2019 */
 
+/* split-css-selector by Joakim Carlstein (C) 2015 for function 'splitSelectors'. Licenced under MIT */
+
 /*
  @param children
  @param options
@@ -29,7 +31,7 @@ function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 function getCSSRules(children, options, matchedCSS) {
   return children.reduce(function (matchedCSS, child, i) {
     matchedCSS = getCSSRulesByElement(child, options, matchedCSS);
-    if (child.childNodes) matchedCSS = getCSSRules(_toConsumableArray(child.childNodes), options, matchedCSS);
+    if (!options.ignoreChildren && child.childNodes) matchedCSS = getCSSRules(_toConsumableArray(child.childNodes), options, matchedCSS);
     return matchedCSS;
   }, matchedCSS || {});
 }
@@ -59,15 +61,11 @@ function getCSSRulesByElement(el, options, matchedCSS) {
 function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
   var _loop = function _loop(i) {
     var rule = rules[i];
+    console.log("sdfsdfsdf", rule.media);
 
     if (rule.selectorText) {
       if (ruleIsAllowed(rule.selectorText, options)) {
-        // TODO use proper selector parser
-        // Currently the splitting is naive and splits
-        // on comma which is fine for most CSS but
-        // this wouldn't support selectors strings like
-        // 'a[attr=','],b'
-        var selectors = rule.selectorText.split(",");
+        var selectors = splitSelectors(rule.selectorText);
         selectors.forEach(function (selector) {
           var trimmedSelector, normalizedSelector;
 
@@ -82,10 +80,11 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
             //   input:-webkit-something
             //   input:-ms-something
             //
-            // or potentially global selectors like without anything
-            // before the "::",
+            // or potentially selectors without anything before
+            // the ":",
             //
             //   ::-moz-something
+            //   :not(input)
             //
             // and there are also escaped selectors like,
             //
@@ -124,12 +123,15 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
             //    input\:\:moz-something -> input\:\:moz-something
             trimmedSelector = selector.trim();
             var unique = Math.random().toString(16);
-            normalizedSelector = trimmedSelector.replace(/\\:/g, unique) // ensure "\:" is temporarily changed to simplify removing ":something"
+            normalizedSelector = trimmedSelector.replace(/\\:/g, unique) // Temporarily replace "\:" (escaped colon) to simplify
+            // removing ":something" (real colon) which we restore later.
             .replace(/:+.*$/gi, function (match) {
-              return [":first-child", ":last-child", ":first-letter", ":first-line"].includes(match.replace("::", ":")) ? match : "";
-            }).replace(new RegExp(unique, "g"), "\\:");
+              return [":first-child", ":last-child", ":first-letter", ":first-line", ":first"].includes(match.replace(/::/g, ":")) ? match : "";
+            }) // Restore escaped colons back to "\:".
+            // See above comment about escaped colons.
+            .replace(new RegExp(unique, "g"), "\\:");
 
-            if (trimmedSelector.indexOf(":") === 0 || el.matches(normalizedSelector)) {
+            if (el.matches(normalizedSelector)) {
               matchedCSS[i] = {
                 selectors: matchedCSS[i] && matchedCSS[i].selectors || [],
                 properties: rule.cssText.substring(rule.cssText.indexOf("{"))
@@ -146,15 +148,20 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
           }
         });
       }
-    } else if ((rule.rules || rule.cssRules) && rule.conditionText) {
-      if (mediaIsAllowed(rule.conditionText, options)) {
+    } else if ((rule.rules || rule.cssRules) && (rule.conditionText || rule.media)) {
+      var conditionText = rule.conditionText || rule.media[0];
+      console.log({
+        rulez: conditionText
+      });
+
+      if (mediaIsAllowed(conditionText, options)) {
         // a nested rule like @media { rule { ... } }
         // so we filter the rules inside individually
         var nestedRules = _filterCSSRulesByElement(el, rule.rules || rule.cssRules, options, {});
 
         if (nestedRules) {
           matchedCSS[i] = {
-            before: "@media " + rule.conditionText + " {",
+            before: "@media " + conditionText + " {",
             children: nestedRules,
             after: "}"
           };
@@ -331,4 +338,44 @@ function serializeCSSRules(rules) {
 
     return css;
   }).join("");
+}
+
+function splitSelectors(selectors) {
+  function isAtRule(selector) {
+    return selector.indexOf("@") === 0;
+  }
+
+  if (isAtRule(selectors)) {
+    return [selectors];
+  }
+
+  var splitted = [];
+  var parens = 0;
+  var angulars = 0;
+  var soFar = "";
+
+  for (var i = 0, len = selectors.length; i < len; i++) {
+    var char = selectors[i];
+
+    if (char === "(") {
+      parens += 1;
+    } else if (char === ")") {
+      parens -= 1;
+    } else if (char === "[") {
+      angulars += 1;
+    } else if (char === "]") {
+      angulars -= 1;
+    } else if (char === ",") {
+      if (!parens && !angulars) {
+        splitted.push(soFar.trim());
+        soFar = "";
+        continue;
+      }
+    }
+
+    soFar += char;
+  }
+
+  splitted.push(soFar.trim());
+  return splitted;
 }

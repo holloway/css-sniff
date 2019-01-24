@@ -97,6 +97,10 @@ A map to set options in format
        document, // optional in browsers, but required
                  // for JSDOM to provide the `document`
                  // instance
+       ignoreChildren: false,
+                 // don't descend childNodes looking
+                 // for CSS matches (ie, only check
+                 // top-level nodes).
     }
 
 #### • matchedCSS (optional)
@@ -118,3 +122,7 @@ Some CSS properties are inherited (or effectively inherited) from parent element
 For example, if you have a `header` with a red background but that red colour comes from `body { background: red; }` then searching for CSS Rules for `header` won't include the red background CSS.
 
 Similarly, if a parent element defines a `line-height` which is used by descendant elements then that won't be included.
+
+# split-css-selector
+
+Thanks to @joakimbeng for this useful library which I've inlined in src/index.js. The reason this was inlined is because this utility is a single file and can avoid Webpack (ie, just use Babel).

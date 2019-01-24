@@ -1,11 +1,12 @@
 {
   "name": "css-sniff",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "description": "Extracts matching CSS Rules (Selectors) that apply to elements",
   "main": "build/index.js",
   "homepage": "https://github.com/holloway/css-sniff",
   "scripts": {
-    "build": "babel src --out-dir build"
+    "build": "babel src --out-dir build",
+    "test": "jest"
   },
   "keywords": [
     "css",
@@ -23,7 +24,11 @@
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
-    "@babel/preset-env": "^7.2.3"
+    "@babel/preset-env": "^7.2.3",
+    "babel-core": "^7.0.0-bridge.0",
+    "jest": "^23.6.0",
+    "jsdom": "^13.1.0",
+    "split-css-selector": "^1.0.0"
   },
   "babel": {
     "presets": [
