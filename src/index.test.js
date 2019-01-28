@@ -35,6 +35,21 @@ describe("CSS Rules", () => {
     expect(css).toBe("p{background: red;}@media print {p{color: purple;}}");
   });
 
+  it("Includes pseudo-elements", async () => {
+    const dom = await getDom(
+      'p,a { background: red;} p:after { content: "aftery"} @media print { p:before { content: "test"; } } ',
+      "<p>test</p>"
+    );
+    const paragraphs = [...dom.window.document.querySelectorAll("p")];
+    const matchedCSS = getCSSRules(paragraphs, {
+      document: dom.window.document
+    });
+    const css = serializeCSSRules(matchedCSS);
+    expect(css).toBe(
+      'p{background: red;}p:after{content: "aftery";}@media print {p:before{content: "test";}}'
+    );
+  });
+
   it("Filters @media queries", async () => {
     const dom = await getDom(
       "p,a { background: red;} @media print { p,a { color: purple } } ",
