@@ -77,6 +77,22 @@ describe("CSS Rules", () => {
       ".link{background: blue;}.link.\\:focus{background: red;}"
     );
   });
+
+  it("Serializes !important", async () => {
+    const dom = await getDom(
+      ".link { background: blue !important;} .link.\\:focus { background: red;} ",
+      '<p class="link :focus">test</p>'
+    );
+    const paragraphs = [...dom.window.document.querySelectorAll("p")];
+    const matchedCSS = getCSSRules(paragraphs, {
+      document: dom.window.document
+    });
+    const css = serializeCSSRules(matchedCSS);
+    console.log(css);
+    expect(css).toBe(
+      ".link{background: blue !important;}.link.\\:focus{background: red;}"
+    );
+  });
 });
 
 const getDom = async (css, body) => {
