@@ -18,46 +18,51 @@ yarn add <a href="https://www.npmjs.com/package/css-sniff">css-sniff</a>
 
 ## Usage
 
-    import { getCSSRules, serializeCSSRules } from 'css-sniff';
+```javascript
+import { getCSSRules, serializeCSSRules } from 'css-sniff';
 
-    const elements = document.querySelectorAll('header, .logo');
-    const matchedCSS = getCSSRules([...elements]);
-    const cssString = serializeCSSRules(matchedCSS);
+const elements = document.querySelectorAll('header, .logo');
+const matchedCSS = getCSSRules([...elements]);
+const cssString = serializeCSSRules(matchedCSS);
+```
 
 cssString is now a string that might look like:
 
-    header { background: red; }
-    .logo { width: 250px; }
-    @media only screen and (max-width: 250px) {
-        .logo {
-            width: 100%;
-        }
-    }
+```css
+header { background: red; }
+.logo { width: 250px; }
+@media only screen and (max-width: 250px) {
+  .logo {
+    width: 100%;
+  }
+}
+```
 
 Usage with JSDOM
 
-    import { getCSSRules, serializeCSSRules } from 'css-sniff';
+```javascript
+import { getCSSRules, serializeCSSRules } from 'css-sniff';
 
-    const main = async () => {
-        dom = await JSDOM.fromURL(url, {
-            resources: "usable",
-            pretendToBeVisual: true
-        });
+const main = async () => {
+  dom = await JSDOM.fromURL(url, {
+     resources: "usable",
+     pretendToBeVisual: true
+  });
 
-        // Wait for subresources (external CSS) to load so
-        // that CSS detection will work
-        await new Promise(resolve => {
-            dom.window.document.addEventListener("load", resolve);
-        });
+  // Wait for subresources (external CSS) to load so
+  // that CSS is in the DOM and CSS detection will work
+  await new Promise(resolve => {
+    dom.window.document.addEventListener("load", resolve);
+  });
 
-        const elements = document.querySelectorAll('header, .logo');
-        const matchedCSS = getCSSRules([...elements], {
-            document: dom.window.document
-        });
-        const cssString = serializeCSSRules(matchedCSS);
-    }
-
-    main();
+  const elements = document.querySelectorAll('header, .logo');
+  const matchedCSS = getCSSRules([...elements], {
+    document: dom.window.document
+  });
+  const cssString = serializeCSSRules(matchedCSS);
+}
+main();
+```
 
 ## API
 
@@ -74,34 +79,35 @@ All nodes below these are searched for CSS Rules.
 ##### • options (optional)
 
 A map to set options in format
-
-    {
-       whitelist: {
-             // optional pattern to only include
-             // CSS if it matches these patterns,
-           media: ["media substring match"],
-             // useful for only allowing some
-             // types of @media such as print
-           stylesheet: ["url substring match"],
-             // useful for only allowing some
-             // CSS files
-           rule: ["selector substring match"]
-       },
-       blacklist: {
-           media: ["media substring match"],
-           stylesheet: ["url substring match"],
-             // Useful for blocking some CSS files
-             // such as a site's template.
-           rule: ["selector substring match"]
-       },
-       document, // optional in browsers, but required
-                 // for JSDOM to provide the `document`
-                 // instance
-       ignoreChildren: false,
-                 // don't descend childNodes looking
-                 // for CSS matches (ie, only check
-                 // top-level nodes).
-    }
+```javascript
+{
+   whitelist: {
+         // optional pattern to only include
+         // CSS if it matches these patterns,
+       media: ["media substring match"],
+         // useful for only allowing some
+         // types of @media such as print
+       stylesheet: ["url substring match"],
+         // useful for only allowing some
+         // CSS files
+       rule: ["selector substring match"]
+   },
+   blacklist: {
+       media: ["media substring match"],
+       stylesheet: ["url substring match"],
+          // Useful for blocking some CSS files
+          // such as a site's template.
+          rule: ["selector substring match"]
+   },
+   document, // optional in browsers, but required
+             // for JSDOM to provide the `document`
+             // instance
+   ignoreChildren: false,
+             // don't descend childNodes looking
+             // for CSS matches (ie, only check
+             // top-level nodes).
+}
+```
 
 #### • matchedCSS (optional)
 
