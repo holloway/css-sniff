@@ -50,8 +50,10 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
   for (let i in rules) {
     const rule = rules[i];
     if (rule.selectorText) {
-      if (ruleIsAllowed(rule.selectorText, options)) {
-        const selectors = splitSelectors(rule.selectorText);
+      const allSelector = rule.selectorText.replace(/@charset.*?;/g, "");
+
+      if (ruleIsAllowed(allSelector, options)) {
+        const selectors = splitSelectors(allSelector);
 
         selectors.forEach(selector => {
           let trimmedSelector, normalizedSelector;

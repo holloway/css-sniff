@@ -88,10 +88,20 @@ describe("CSS Rules", () => {
       document: dom.window.document
     });
     const css = serializeCSSRules(matchedCSS);
-    console.log(css);
     expect(css).toBe(
       ".link{background: blue !important;}.link.\\:focus{background: red;}"
     );
+  });
+
+  it("Ignores @charset", async () => {
+    const data = `@charset "UTF-8" ;\n  body:before { background: red;}`;
+    const dom = await getDom(data, '<body class="no-match"><p>test</p></body>');
+    const body = [...dom.window.document.querySelectorAll("body")];
+    const matchedCSS = getCSSRules(body, {
+      document: dom.window.document
+    });
+    const css = serializeCSSRules(matchedCSS);
+    expect(css).not.toContain("@charset");
   });
 });
 
