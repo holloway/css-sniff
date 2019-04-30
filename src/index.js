@@ -5,154 +5,175 @@
  @param children
  @param options
  @param matchedCSS
- @returns { object }
+ @returns Promise<{ object }>
    'matchedCSS' a variable to give to serializeCSSRules()
 */
-export function getCSSRules(children, options, matchedCSS) {
-  return children.reduce((matchedCSS, child, i) => {
-    matchedCSS = getCSSRulesByElement(child, options, matchedCSS);
-    if (!options.ignoreChildren && child.childNodes)
-      matchedCSS = getCSSRules([...child.childNodes], options, matchedCSS);
-    return matchedCSS;
-  }, matchedCSS || {});
+export async function getCSSRules(children, options, matchedCSS) {
+  const matched = matchedCSS || {};
+  await Promise.all(
+    children.map(async child => {
+      await getCSSRulesByElement(child, options, matched);
+      if (!options.ignoreChildren && child.childNodes) {
+        await getCSSRules([...child.childNodes], options, matched);
+      }
+    })
+  );
+  return matched;
 }
 
-function getCSSRulesByElement(el, options, matchedCSS) {
-  const matches =
-    el.matches ||
-    el.webkitMatchesSelector ||
-    el.mozMatchesSelector ||
-    el.msMatchesSelector ||
-    el.oMatchesSelector;
-  if (!matches) return matchedCSS; // presumed text node
-  el.matches = matches;
+async function getCSSRulesByElement(el, options, matched) {
+  if (!el.matches) {
+    return; // presumed text node
+  }
 
   const sheets = options.document.styleSheets || window.document.styleSheets;
 
   for (let i in sheets) {
     const sheet = sheets[i];
     if (sheetIsAllowed(sheet, options)) {
-      const matchedCSSRule = _filterCSSRulesByElement(
+      const matchedCSSRule = await _filterCSSRulesByElement(
         el,
         sheet.rules || sheet.cssRules,
         options,
-        matchedCSS[i] || {}
+        matched[i] || {}
       );
       if (matchedCSSRule) {
-        matchedCSS[i] = matchedCSSRule;
+        matched[i] = matchedCSSRule;
       }
     }
   }
-  return matchedCSS;
 }
 
-function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
+async function _filterCSSRulesByElement(el, rules, options, matched) {
   for (let i in rules) {
     const rule = rules[i];
     if (rule.selectorText) {
-      const allSelector = rule.selectorText.replace(/@charset.*?;/g, "");
+      const sanitisedSelector = rule.selectorText.replace(/@charset.*?;/g, "");
 
-      if (ruleIsAllowed(allSelector, options)) {
-        const selectors = splitSelectors(allSelector);
+      if (ruleIsAllowed(sanitisedSelector, options)) {
+        const selectors = splitSelectors(sanitisedSelector);
 
-        selectors.forEach(selector => {
-          let trimmedSelector, normalizedSelector;
+        await Promise.all(
+          selectors.map(async selector => {
+            let trimmedSelector, normalizedSelector;
 
-          try {
-            // Exceptions may be thrown about browser-specific
-            // selectors such as
-            //
-            //   input::-moz-something
-            //   input::-webkit-something
-            //   input::-ms-something
-            //   input:-moz-something
-            //   input:-webkit-something
-            //   input:-ms-something
-            //
-            // or potentially selectors without anything before
-            // the ":",
-            //
-            //   ::-moz-something
-            //   :not(input)
-            //
-            // and there are also escaped selectors like,
-            //
-            //   .link.\:link
-            //
-            //  (used like <input class="link :link">)
-            //
-            // and pseudo-elements like,
-            //
-            //   span::before
-            //
-            // where the "::before" is irrelevant to whether the
-            // selector matches the element so we should remove it.
-            //
-            // and
-            //
-            //   input:first-child
-            //   p > :first-child
-            //
-            // where we should change to
-            //   input
-            //   p > *
-            // respectively.
-            //
-            // So given all those scenarios we have the following logic,
-            //
-            // 1) If it starts with ":" without anything preceding we'll
-            //    consider it a match because it could be.
-            //    (maybe this should be configurable?)
-            //
-            // 2) If it has a ":" in it that's not preceded by "\" then
-            //    we remove to the end of the selector. ie,
-            //    input:-moz-something -> input
-            //    input\:-moz-something -> input\:-moz-something
-            //    input::before -> input::before
-            //    input\:\:moz-something -> input\:\:moz-something
-            trimmedSelector = selector.trim();
-            const unique = Math.random().toString(16);
-            normalizedSelector = trimmedSelector
-              .replace(/\\:/g, unique)
+            try {
+              // Exceptions may be thrown about browser-specific
+              // selectors such as
+              //
+              //   input::-moz-something
+              //   input::-webkit-something
+              //   input::-ms-something
+              //   input:-moz-something
+              //   input:-webkit-something
+              //   input:-ms-something
+              //
+              // or potentially selectors without anything before
+              // the ":",
+              //
+              //   ::-moz-something
+              //   :not(input)
+              //
+              // and there are also escaped selectors like,
+              //
+              //   .link.\:link
+              //
+              //  (used like <input class="link :link">)
+              //
+              // and pseudo-elements like,
+              //
+              //   span::before
+              //
+              // where the "::before" is irrelevant to whether the
+              // selector matches the element so we should remove it.
+              //
+              // and
+              //
+              //   input:first-child
+              //   p > :first-child
+              //
+              // where we should change to
+              //   input
+              //   p > *
+              // respectively.
+              //
+              // So given all those scenarios we have the following logic,
+              //
+              // 1) If it starts with ":" without anything preceding we'll
+              //    consider it a match because it could be.
+              //    (maybe this should be configurable?)
+              //
+              // 2) If it has a ":" in it that's not preceded by "\" then
+              //    we remove to the end of the selector. ie,
+              //    input:-moz-something -> input
+              //    input\:-moz-something -> input\:-moz-something
+              //    input::before -> input::before
+              //    input\:\:moz-something -> input\:\:moz-something
+
+              // PRE-NORMALISATON
               // Temporarily replace "\:" (escaped colon) to simplify
               // removing ":something" (real colon) which we restore later.
-              .replace(/:+.*$/gi, match => {
-                return [
-                  ":first-child",
-                  ":last-child",
-                  ":first-letter",
-                  ":first-line",
-                  ":first"
-                ].includes(match.replace(/::/g, ":"))
-                  ? match
-                  : "";
-              })
+              normalizedSelector = selector.replace(/\\:/g, unique).trim();
+
+              // START OF NORMALIZATION
+              // The goal here is to anticipate any possible node states that
+              // might match this node (ie, "":checked" or adjacent sibling/hierarchical
+              // selectors)
+
+              normalizedSelector = normalizedSelector
+                .replace(/^.*[\s]/, "") // regex 'greedy' selector anchored to string start, searching for whitespace to convert (eg) ".a + .b + .c" to ".c". Delete any conditions on hierarchical (adjacent sibling / descendent etc.) selectors because they could match and that's close enough to warrant including it.
+                .replace(/:+.*$/gi, "") // regex 'greedy' selector anchored to string end, searching for ":" and deleting everything after
+                .trim();
+
+              // END OF NORMALISATION
+
               // Restore escaped colons back to "\:".
               // See above comment about escaped colons.
-              .replace(new RegExp(unique, "g"), "\\:");
+              normalizedSelector = normalizedSelector.replace(
+                new RegExp(unique, "g"),
+                "\\:"
+              );
 
-            if (el.matches(normalizedSelector)) {
-              matchedCSS[i] = {
-                selectors: (matchedCSS[i] && matchedCSS[i].selectors) || [],
-                properties: rule.cssText.substring(rule.cssText.indexOf("{"))
-              };
-              if (matchedCSS[i].selectors.indexOf(selector) === -1) {
-                matchedCSS[i].selectors.push(selector);
+              const isMatch = await Promise.resolve(
+                el.matches(normalizedSelector)
+              );
+              // Why Promise.resolve?
+              //
+              // Well W3C DOM has .matches as a syncronous API
+              // that returns booleans
+              //
+              // However to support some DOM implementations,
+              // such as wrappers around Puppeteer, it would be
+              // helpful to have an asyncronous API, so we also
+              // resolve promises.
+              //
+              // As per https://stackoverflow.com/a/27746324
+              // we're using Promise.resolve to handle both types
+              // of values.
+
+              if (isMatch) {
+                matched[i] = {
+                  selectors: (matched[i] && matched[i].selectors) || [],
+                  properties: rule.cssText.substring(rule.cssText.indexOf("{"))
+                };
+                if (matched[i].selectors.indexOf(selector) === -1) {
+                  matched[i].selectors.push(selector);
+                }
+              }
+            } catch (e) {
+              if ("@charset".indexOf(rule.selectorText) !== -1) {
+                console.error(
+                  "ERROR",
+                  rule.type,
+                  `[${trimmedSelector}]`,
+                  `[[${normalizedSelector}]]`,
+                  `(((${rule.selectorText})))`,
+                  e
+                );
               }
             }
-          } catch (e) {
-            if ("@charset".indexOf(rule.selectorText) !== -1) {
-              console.error(
-                "ERROR",
-                rule.type,
-                `[${trimmedSelector}]`,
-                `[[${normalizedSelector}]]`,
-                `(((${rule.selectorText})))`,
-                e
-              );
-            }
-          }
-        });
+          })
+        );
       }
     } else if (
       (rule.rules || rule.cssRules) &&
@@ -162,7 +183,7 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
       if (mediaIsAllowed(conditionText, options)) {
         // a nested rule like @media { rule { ... } }
         // so we filter the rules inside individually
-        const nestedRules = _filterCSSRulesByElement(
+        const nestedRules = await _filterCSSRulesByElement(
           el,
           rule.rules || rule.cssRules,
           options,
@@ -170,7 +191,7 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
         );
 
         if (nestedRules) {
-          matchedCSS[i] = {
+          matched[i] = {
             before: "@media " + conditionText + " {",
             children: nestedRules,
             after: "}"
@@ -179,7 +200,7 @@ function _filterCSSRulesByElement(el, rules, options, matchedCSS) {
       }
     }
   }
-  return Object.keys(matchedCSS).length ? matchedCSS : undefined;
+  return Object.keys(matched).length ? matched : undefined;
 }
 
 function sheetIsAllowed(sheet, options) {
@@ -200,6 +221,10 @@ function sheetIsAllowed(sheet, options) {
         const attributesJSON = JSON.stringify(attrs);
         return attributesJSON.indexOf(sheetMatch) !== -1;
     }
+    throw new Error(
+      `CSS Sniff: Unknown sheet nodeName of ${sheet.ownerNode &&
+        sheet.ownerNode.nodeName} `
+    );
   };
 
   let whitelisted = true;
@@ -331,6 +356,13 @@ export function serializeCSSRules(rules) {
     .map(key => {
       const rule = rules[key];
       let css = "";
+      if (!rule) {
+        throw Error(
+          `css-sniff: serializeCSSRules() key: "${key}", value: ${JSON.stringify(
+            rule
+          )}`
+        );
+      }
       if (rule.selectors) {
         css += rule.selectors.join(",");
         css += rule.properties;
@@ -346,7 +378,7 @@ export function serializeCSSRules(rules) {
     .join("");
 }
 
-function splitSelectors(selectors) {
+export function splitSelectors(selectors) {
   function isAtRule(selector) {
     return selector.indexOf("@") === 0;
   }
@@ -380,3 +412,7 @@ function splitSelectors(selectors) {
   splitted.push(soFar.trim());
   return splitted;
 }
+
+const unique = `css-sniff-placeholder-${Math.random()
+  .toString(16)
+  .replace(/[^0-9A-Fa-f]/gi, "")}`;

@@ -19,18 +19,23 @@ yarn add <a href="https://www.npmjs.com/package/css-sniff">css-sniff</a>
 ## Usage
 
 ```javascript
-import { getCSSRules, serializeCSSRules } from 'css-sniff';
+import { getCSSRules, serializeCSSRules } from "css-sniff";
 
-const elements = document.querySelectorAll('header, .logo');
-const matchedCSS = getCSSRules([...elements]);
+// Inside an async function...
+const elements = document.querySelectorAll("header, .logo");
+const matchedCSS = await getCSSRules([...elements]);
 const cssString = serializeCSSRules(matchedCSS);
 ```
 
 cssString is now a string that might look like:
 
 ```css
-header { background: red; }
-.logo { width: 250px; }
+header {
+  background: red;
+}
+.logo {
+  width: 250px;
+}
 @media only screen and (max-width: 250px) {
   .logo {
     width: 100%;
@@ -41,12 +46,12 @@ header { background: red; }
 Usage with JSDOM
 
 ```javascript
-import { getCSSRules, serializeCSSRules } from 'css-sniff';
+import { getCSSRules, serializeCSSRules } from "css-sniff";
 
 const main = async () => {
   dom = await JSDOM.fromURL(url, {
-     resources: "usable",
-     pretendToBeVisual: true
+    resources: "usable",
+    pretendToBeVisual: true
   });
 
   // Wait for subresources (external CSS) to load so
@@ -55,12 +60,12 @@ const main = async () => {
     dom.window.document.addEventListener("load", resolve);
   });
 
-  const elements = document.querySelectorAll('header, .logo');
-  const matchedCSS = getCSSRules([...elements], {
+  const elements = document.querySelectorAll("header, .logo");
+  const matchedCSS = await getCSSRules([...elements], {
     document: dom.window.document
   });
   const cssString = serializeCSSRules(matchedCSS);
-}
+};
 main();
 ```
 
@@ -69,6 +74,8 @@ main();
 ### getCSSRules(children, options, matchedCSS)
 
 The bulk of CSS Sniff. This returns a `matchedCSS` variable that may be given to `serializeCSSRules` to produce a CSS string.
+
+It's an `async` function.
 
 ##### • children (required)
 
@@ -79,6 +86,7 @@ All nodes below these are searched for CSS Rules.
 ##### • options (optional)
 
 A map to set options in format
+
 ```javascript
 {
    whitelist: {

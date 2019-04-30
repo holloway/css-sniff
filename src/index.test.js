@@ -113,7 +113,7 @@ const getDom = async (css, body) => {
   };
   let dom;
   try {
-    dom = await new JSDOM(
+    dom = await JSDOM(
       `<html><head><style>${css}</style></head><body>${body}</body></html>`,
       options
     );
